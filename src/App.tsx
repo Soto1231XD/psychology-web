@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import WhatsAppButton from './components/WhatsAppButton'
+import ScrollToTop from './components/ScrollToTop'
 import Home from './pages/Home'
 import About from './pages/About'
 import Booking from './pages/Booking'
@@ -12,6 +13,7 @@ function App() {
 
   return (
     <div className="flex min-h-screen flex-col bg-fondo">
+      <ScrollToTop />
       <Navbar />
       <main className="flex-1">
         <AnimatePresence mode="wait">
