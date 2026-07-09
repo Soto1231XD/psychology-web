@@ -163,7 +163,7 @@ export default function Home() {
       <section className="w-full py-20 bg-fondo px-6">
         <span className="text-dorado font-semibold uppercase tracking-widest text-xs">Proceso</span>
         <h2 className="font-display text-3xl md:text-4xl font-bold text-secundario mt-2 mb-14">
-          Cómo funciona
+          ¿Cómo funciona?
         </h2>
         <div className="relative grid grid-cols-1 md:grid-cols-3 gap-10 max-w-5xl mx-auto">
           <div className="hidden md:block absolute top-8 left-[16.5%] right-[16.5%] h-0.5 bg-principal/20" />

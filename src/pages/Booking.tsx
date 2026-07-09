@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent, type FormEvent } from 'react'
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import Calendar from 'react-calendar'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -10,6 +10,7 @@ import {
   Clock,
   User,
 } from 'lucide-react'
+import { fetchBusyIntervals, type BusyInterval } from '../lib/googleCalendar'
 
 type PatientType = 'Niño' | 'Adolescente' | 'Adulto'
 
@@ -45,6 +46,26 @@ function getSlotsForDate(d: Date | null): string[] {
 
 const isSunday = (d: Date) => d.getDay() === 0
 
+function slotToDateTime(date: Date, slot: string): Date {
+  const [time, meridiem] = slot.split(' ')
+  const [hoursRaw, minutes] = time.split(':').map(Number)
+  let hours = hoursRaw % 12
+  if (meridiem === 'PM') hours += 12
+  const result = new Date(date)
+  result.setHours(hours, minutes, 0, 0)
+  return result
+}
+
+function isSlotBusy(date: Date, slot: string, busy: BusyInterval[]): boolean {
+  const slotStart = slotToDateTime(date, slot)
+  return busy.some((b) => slotStart >= b.start && slotStart < b.end)
+}
+
+function getAvailableSlots(date: Date | null, busy: BusyInterval[]): string[] {
+  if (!date) return []
+  return getSlotsForDate(date).filter((slot) => !isSlotBusy(date, slot, busy))
+}
+
 const INITIAL_FORM: FormData = {
   nombre: '',
   edad: '',
@@ -64,7 +85,19 @@ export default function Booking() {
   const [time, setTime] = useState('')
   const [form, setForm] = useState<FormData>(INITIAL_FORM)
   const [feedback, setFeedback] = useState<Feedback>(null)
-  const availableSlots = getSlotsForDate(date)
+  const [busy, setBusy] = useState<BusyInterval[]>([])
+  const availableSlots = getAvailableSlots(date, busy)
+
+  useEffect(() => {
+    const timeMin = new Date()
+    const timeMax = new Date()
+    timeMax.setDate(timeMax.getDate() + 120)
+    fetchBusyIntervals(timeMin, timeMax).then(setBusy)
+  }, [])
+
+  useEffect(() => {
+    if (time && !availableSlots.includes(time)) setTime('')
+  }, [availableSlots, time])
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -160,8 +193,28 @@ export default function Booking() {
             }}
             value={date}
             minDate={new Date()}
-            tileDisabled={({ date: d }) => isSunday(d)}
+            tileDisabled={({ date: d }) => {
+              if (isSunday(d)) return true
+              const slots = getSlotsForDate(d)
+              return slots.length > 0 && slots.every((s) => isSlotBusy(d, s, busy))
+            }}
+            tileContent={({ date: d, view }) => {
+              if (view !== 'month' || isSunday(d)) return null
+              const hasBooking = getSlotsForDate(d).some((s) => isSlotBusy(d, s, busy))
+              if (!hasBooking) return null
+              const isSelected = date && d.toDateString() === date.toDateString()
+              return (
+                <span
+                  className={`block w-1.5 h-1.5 rounded-full mx-auto mt-1 ${
+                    isSelected ? 'bg-white' : 'bg-principal'
+                  }`}
+                />
+              )
+            }}
           />
+          <p className="flex items-center justify-center gap-1.5 text-xs text-gray-500 mt-3">
+            <span className="w-1.5 h-1.5 rounded-full bg-principal" /> Día con citas ya agendadas
+          </p>
 
           <div className="mt-6 bg-[#F9F6F0] p-5 rounded-2xl border border-gray-100">
             <h3 className="flex items-center justify-center gap-2 text-lg font-semibold text-secundario mb-3">
