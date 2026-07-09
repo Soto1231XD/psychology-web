@@ -3,7 +3,7 @@ import Calendar from 'react-calendar'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   CalendarDays,
-  CheckCircle2,
+  Send,
   XCircle,
   Tag,
   ListChecks,
@@ -64,6 +64,31 @@ function isSlotBusy(date: Date, slot: string, busy: BusyInterval[]): boolean {
 function getAvailableSlots(date: Date | null, busy: BusyInterval[]): string[] {
   if (!date) return []
   return getSlotsForDate(date).filter((slot) => !isSlotBusy(date, slot, busy))
+}
+
+const WHATSAPP_NUMBER = '529982642671'
+
+function buildWhatsAppMessage(form: FormData, patientType: PatientType, date: Date, time: string): string {
+  const lines = [
+    'Hola, quiero agendar una cita',
+    '',
+    `Tipo de paciente: ${patientType}`,
+    `Nombre completo: ${form.nombre}`,
+    `Edad: ${form.edad}`,
+  ]
+
+  if (patientType === 'Niño' || patientType === 'Adolescente') {
+    lines.push(`Nombre del padre/madre/tutor: ${form.nombrePadre}`)
+    if (form.relacion) lines.push(`Relación con el paciente: ${form.relacion}`)
+  }
+
+  if (form.correo) lines.push(`Correo: ${form.correo}`)
+  if (form.telefono) lines.push(`Teléfono: ${form.telefono}`)
+  if (form.motivo) lines.push(`Motivo de la consulta: ${form.motivo}`)
+
+  lines.push('', `Fecha: ${date.toLocaleDateString()}`, `Hora: ${time}`)
+
+  return lines.join('\n')
 }
 
 const INITIAL_FORM: FormData = {
@@ -148,9 +173,12 @@ export default function Booking() {
       return
     }
 
+    const message = buildWhatsAppMessage(form, patientType, date, time)
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank')
+
     setFeedback({
       type: 'success',
-      message: `Cita agendada para ${date.toLocaleDateString()} a las ${time}`,
+      message: `Se abrió WhatsApp con tu solicitud para el ${date.toLocaleDateString()} a las ${time}. Envía el mensaje y espera a que Elizabeth te confirme por ese medio — el horario aún no queda reservado hasta que ella lo confirme.`,
     })
     setForm(INITIAL_FORM)
     setDate(null)
@@ -237,16 +265,9 @@ export default function Booking() {
               <li>Elige el horario disponible más conveniente a tu disponibilidad.</li>
               <li>Responde a las preguntas obligatorias para agendar.</li>
               <li>
-                Una vez agendada tu cita, es importante comunicarte al{' '}
-                <a
-                  href="https://wa.me/529982642671?text=Hola%20quiero%20info%20sobre%20sesiones"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[#25D366] font-semibold hover:underline"
-                >
-                  WhatsApp
-                </a>{' '}
-                para que te pueda enviar la ubicación exacta y detalles importantes.
+                Al dar clic en "Agendar Cita" se abrirá{' '}
+                <span className="text-[#25D366] font-semibold">WhatsApp</span> con tus datos
+                listos: solo confirma el envío para que Elizabeth reciba tu solicitud.
               </li>
             </ol>
           </div>
@@ -441,8 +462,8 @@ export default function Booking() {
               </button>
               {feedback.type === 'success' ? (
                 <>
-                  <CheckCircle2 className="w-12 h-12 text-green-600 mx-auto mb-3" />
-                  <h3 className="text-xl font-bold text-green-700 mb-2 font-display">Cita Agendada</h3>
+                  <Send className="w-12 h-12 text-secundario mx-auto mb-3" />
+                  <h3 className="text-xl font-bold text-secundario mb-2 font-display">Solicitud Enviada</h3>
                   <p className="text-gray-600">{feedback.message}</p>
                 </>
               ) : (
